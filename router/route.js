@@ -316,12 +316,42 @@ router.get("/mapper/flows", (_req, res) => {
   res.send({ data: flows });
 });
 
+router.post("/mapper/ondc", async (req, res) => {
+  logger.info("Indise mapper config");
+  const { businessPayload, updatedSession, messageId, sessionId, response } =
+    req.body;
+
+  if (
+    !businessPayload ||
+    !updatedSession ||
+    !messageId ||
+    !sessionId ||
+    !response
+  ) {
+    return res.status(400).send({
+      message:
+        "businessPayload || updatedSession || sessionId || response || messageId not present",
+    });
+  }
+
+  handleRequestForJsonMapper(
+    businessPayload,
+    updatedSession,
+    messageId,
+    sessionId,
+    response
+  );
+
+  res.send({ success: true });
+});
+
 router.post("/mapper/:config", async (req, res) => {
   const { transactionId, payload } = req.body;
   const config = req.params.config;
   let session = getCache("jm_" + transactionId);
 
   logger.info("cofig> ", config);
+  console.log("configs", config);
 
   if (!session) {
     return res.status(400).send({ message: "No session exists" });
@@ -348,16 +378,35 @@ router.post("/mapper/:config", async (req, res) => {
     return res.status(200).send({ session });
   }
 
-  try {
-    const { payload: becknPayload, session: updatedSession } =
-      createBecknObject(
-        session,
-        session.protocolCalls[config],
-        payload,
-        session.protocolCalls[config].protocol
-      );
+  let protocolSession = JSON.parse(JSON.stringify(session));
+  delete protocolSession.input;
+  delete protocolSession.protocolCalls;
 
-    session = updatedSession;
+  console.log("sending Transdcaiton ID", transactionId);
+  try {
+    const response = await axios.post(`http://localhost:80/createPayload`, {
+      type: session.protocolCalls[config].type,
+      config: config,
+      data: payload,
+      transactionId: transactionId,
+      target: session.protocolCalls[config].target,
+      session: {
+        createSession: session.protocolCalls[config].target === "GATEWAY",
+        data: protocolSession,
+      },
+    });
+
+    const { becknPayload, updatedSession, becknReponse } = response.data;
+    // createBecknObject(
+    //   session,
+    //   session.protocolCalls[config],
+    //   payload,
+    //   session.protocolCalls[config].protocol
+    // );
+
+    // console.log("becknPayload", becknPayload)
+
+    session = { ...session, ...updatedSession };
     insertRequest(becknPayload, null);
     session.protocolCalls[config] = {
       ...session.protocolCalls[config],
@@ -369,41 +418,41 @@ router.post("/mapper/:config", async (req, res) => {
     };
     session = { ...session, ...payload };
 
-    const type = session.protocolCalls[config].type;
+    // const type = session.protocolCalls[config].type;
 
-    becknPayload.context.bap_uri = `${callbackUrl}/ondc`;
-    let url;
+    // becknPayload.context.bap_uri = `${callbackUrl}/ondc`;
+    // let url;
 
-    console.log("beckn Payload", becknPayload);
+    // console.log("beckn Payload", becknPayload);
 
-    if (session.protocolCalls[config].target === "GATEWAY") {
-      url = GATEWAY_URL;
-    } else {
-      url = becknPayload.context.bpp_uri;
-    }
+    // if (session.protocolCalls[config].target === "GATEWAY") {
+    //   url = GATEWAY_URL;
+    // } else {
+    //   url = becknPayload.context.bpp_uri;
+    // }
 
-    if (url[url.length - 1] != "/") {
-      //"add / if not exists in bap uri"
-      url = url + "/";
-    }
+    // if (url[url.length - 1] != "/") {
+    //   //"add / if not exists in bap uri"
+    //   url = url + "/";
+    // }
 
-    logger.info("becknPayload /mapper/:config  -  ", becknPayload);
+    // logger.info("becknPayload /mapper/:config  -  ", becknPayload);
 
-    const signedHeader = await generateHeader(becknPayload);
-    logger.info("SignedHeader /mapper/:config  -  ", signedHeader);
+    // const signedHeader = await generateHeader(becknPayload);
+    // logger.info("SignedHeader /mapper/:config  -  ", signedHeader);
 
-    const header = { headers: { Authorization: signedHeader } };
+    // const header = { headers: { Authorization: signedHeader } };
 
-    const response = await axios.post(`${url}${type}`, becknPayload, header);
+    // const response = await axios.post(`${url}${type}`, becknPayload, header);
 
-    logger.info(
-      "res>>>>>> /mapper/:config  -  ",
-      JSON.stringify(response.data)
-    );
+    // logger.info(
+    //   "res>>>>>> /mapper/:config  -  ",
+    //   JSON.stringify(response.data)
+    // );
 
     session.protocolCalls[config] = {
       ...session.protocolCalls[config],
-      becknResponse: response.data,
+      becknResponse: becknReponse,
     };
 
     const nextRequest = session.protocolCalls[config].nextRequest;
@@ -417,13 +466,8 @@ router.post("/mapper/:config", async (req, res) => {
 
     res.status(200).send({ response: response.data, session });
   } catch (e) {
-    logger.error(
-      "Error while sending request  -  ",
-      JSON.stringify(e?.response) || e
-    );
-    return res
-      .status(500)
-      .send({ message: "Error while sending request", data: e?.response || e });
+    logger.error("Error while sending request  -  ", e?.response?.data || e);
+    return res.status(500).send({ message: "Error while sending request", e });
   }
 });
 

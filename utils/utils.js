@@ -119,8 +119,13 @@ const insertSession = (session) => {
   myCache.set("jm_" + session.transaction_id, session, 86400);
 };
 
-const handleRequestForJsonMapper = async (response) => {
-  if (!response?.context?.transaction_id) return;
+const handleRequestForJsonMapper = async (
+  businessPayload,
+  updatedSession,
+  messageId,
+  sessionId,
+  response
+) => {
   const ack = {
     message: {
       ack: {
@@ -128,23 +133,21 @@ const handleRequestForJsonMapper = async (response) => {
       },
     },
   };
-  logger.info("inside handle request for json mapper", response);
 
-  // let session = getCache("jm_" + response.context.transaction_id);
-  let session = null;
+  let session = getCache("jm_" + sessionId);
 
-  const allSession = getCache();
-  logger.info("allSessions", allSession);
+  // const allSession = getCache();
+  // logger.info("allSessions", allSession);
 
-  allSession.map((ses) => {
-    if (!ses.startsWith("jm_")) return;
+  // allSession.map((ses) => {
+  //   if (!ses.startsWith("jm_")) return;
 
-    const sessionData = getCache(ses);
-    if (sessionData.transactionIds.includes(response.context.transaction_id)) {
-      logger.info(" got session>>>>");
-      session = sessionData;
-    }
-  });
+  //   const sessionData = getCache(ses);
+  //   if (sessionData.transactionIds.includes(response.context.transaction_id)) {
+  //     logger.info(" got session>>>>");
+  //     session = sessionData;
+  //   }
+  // });
 
   if (!session) {
     logger.info("No session exists");
@@ -156,7 +159,7 @@ const handleRequestForJsonMapper = async (response) => {
 
   Object.entries(session.protocolCalls).map((item) => {
     const [key, value] = item;
-    if (value.messageId === response.context.message_id) {
+    if (value.messageId === messageId) {
       config = key;
     }
 
@@ -173,13 +176,13 @@ const handleRequestForJsonMapper = async (response) => {
     if (!session.protocolCalls[action]) {
       return;
     }
-    const { result: businessPayload, session: updatedSession } =
-      extractBusinessData(
-        action,
-        response,
-        session,
-        session.protocolCalls[action].protocol
-      );
+    // const { result: businessPayload, session: updatedSession } =
+    //   extractBusinessData(
+    //     action,
+    //     response,
+    //     session,
+    //     session.protocolCalls[action].protocol
+    //   );
 
     session = { ...session, ...updatedSession };
 
@@ -208,13 +211,13 @@ const handleRequestForJsonMapper = async (response) => {
     null;
   }
 
-  const { result: businessPayload, session: updatedSession } =
-    extractBusinessData(
-      nextRequest,
-      response,
-      session,
-      session.protocolCalls[nextRequest].protocol
-    );
+  // const { result: businessPayload, session: updatedSession } =
+  //   extractBusinessData(
+  //     nextRequest,
+  //     response,
+  //     session,
+  //     session.protocolCalls[nextRequest].protocol
+  //   );
 
   session = { ...session, ...updatedSession };
 
