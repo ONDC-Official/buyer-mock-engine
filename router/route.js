@@ -396,71 +396,68 @@ router.post("/mapper/:config", async (req, res) => {
       },
     });
 
-    const { becknPayload, updatedSession, becknReponse } = response.data;
-    // createBecknObject(
-    //   session,
-    //   session.protocolCalls[config],
-    //   payload,
-    //   session.protocolCalls[config].protocol
-    // );
+    let mode = "SYNC";
 
-    // console.log("becknPayload", becknPayload)
+    const { becknPayload, updatedSession, becknReponse, businessPayload } =
+      response.data;
 
-    session = { ...session, ...updatedSession };
-    insertRequest(becknPayload, null);
-    session.protocolCalls[config] = {
-      ...session.protocolCalls[config],
-      executed: true,
-      shouldRender: true,
-      becknPayload: becknPayload,
-      businessPayload: payload,
-      messageId: becknPayload.context.message_id,
-    };
-    session = { ...session, ...payload };
+    if (!businessPayload) {
+      mode = "ASYNC";
+    }
 
-    // const type = session.protocolCalls[config].type;
+    session = { ...session, ...updatedSession, ...payload };
 
-    // becknPayload.context.bap_uri = `${callbackUrl}/ondc`;
-    // let url;
+    console.log("MODE", mode);
 
-    // console.log("beckn Payload", becknPayload);
+    if (mode === "ASYNC") {
+      insertRequest(becknPayload, null);
+      session.protocolCalls[config] = {
+        ...session.protocolCalls[config],
+        executed: true,
+        shouldRender: true,
+        becknPayload: becknPayload,
+        businessPayload: payload,
+        messageId: becknPayload.context.message_id,
+        becknResponse: becknReponse,
+      };
 
-    // if (session.protocolCalls[config].target === "GATEWAY") {
-    //   url = GATEWAY_URL;
-    // } else {
-    //   url = becknPayload.context.bpp_uri;
-    // }
+      const nextRequest = session.protocolCalls[config].nextRequest;
 
-    // if (url[url.length - 1] != "/") {
-    //   //"add / if not exists in bap uri"
-    //   url = url + "/";
-    // }
+      session.protocolCalls[nextRequest] = {
+        ...session.protocolCalls[nextRequest],
+        shouldRender: true,
+      };
+    } else {
+      insertRequest(becknPayload.action, null);
+      session.protocolCalls[config] = {
+        ...session.protocolCalls[config],
+        executed: true,
+        shouldRender: true,
+        becknPayload: becknPayload.action,
+        businessPayload: payload,
+        messageId: becknPayload.action.context.message_id,
+        // becknResponse: becknReponse,
+      };
 
-    // logger.info("becknPayload /mapper/:config  -  ", becknPayload);
+      let nextRequest = session.protocolCalls[config].nextRequest;
 
-    // const signedHeader = await generateHeader(becknPayload);
-    // logger.info("SignedHeader /mapper/:config  -  ", signedHeader);
+      session.protocolCalls[nextRequest] = {
+        ...session.protocolCalls[nextRequest],
+        executed: true,
+        shouldRender: true,
+        becknPayload: becknPayload.on_action,
+        businessPayload: businessPayload,
+        // messageId: becknPayload.action.context.message_id,
+        // becknResponse: becknReponse,
+      };
 
-    // const header = { headers: { Authorization: signedHeader } };
+      nextRequest = session.protocolCalls[nextRequest].nextRequest;
 
-    // const response = await axios.post(`${url}${type}`, becknPayload, header);
-
-    // logger.info(
-    //   "res>>>>>> /mapper/:config  -  ",
-    //   JSON.stringify(response.data)
-    // );
-
-    session.protocolCalls[config] = {
-      ...session.protocolCalls[config],
-      becknResponse: becknReponse,
-    };
-
-    const nextRequest = session.protocolCalls[config].nextRequest;
-
-    session.protocolCalls[nextRequest] = {
-      ...session.protocolCalls[nextRequest],
-      shouldRender: true,
-    };
+      session.protocolCalls[nextRequest] = {
+        ...session.protocolCalls[nextRequest],
+        shouldRender: true,
+      };
+    }
 
     insertSession(session);
 
