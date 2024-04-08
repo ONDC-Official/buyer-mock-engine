@@ -387,6 +387,7 @@ router.post("/mapper/:config", async (req, res) => {
     const response = await axios.post(`http://localhost:80/createPayload`, {
       type: session.protocolCalls[config].type,
       config: config,
+      configName: session.configName,
       data: payload,
       transactionId: transactionId,
       target: session.protocolCalls[config].target,
@@ -399,7 +400,7 @@ router.post("/mapper/:config", async (req, res) => {
     let mode = "SYNC";
 
     const { becknPayload, updatedSession, becknReponse, businessPayload } =
-      response.data;
+      response.data.message;
 
     if (!businessPayload) {
       mode = "ASYNC";
@@ -453,10 +454,12 @@ router.post("/mapper/:config", async (req, res) => {
 
       nextRequest = session.protocolCalls[nextRequest].nextRequest;
 
-      session.protocolCalls[nextRequest] = {
-        ...session.protocolCalls[nextRequest],
-        shouldRender: true,
-      };
+      if (nextRequest) {
+        session.protocolCalls[nextRequest] = {
+          ...session.protocolCalls[nextRequest],
+          shouldRender: true,
+        };
+      }
     }
 
     insertSession(session);
