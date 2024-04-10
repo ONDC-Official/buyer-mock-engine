@@ -3,3 +3,4 @@ node_modules
 Logs
 .env.dev.mob
 .env.dev.fis
+.env.dev

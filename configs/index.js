@@ -2,6 +2,7 @@ const fs = require("fs");
 const yaml = require("yaml");
 const path = require("path");
 const $RefParser = require("@apidevtools/json-schema-ref-parser");
+const axios = require("axios");
 const logger = require("../utils/logger");
 
 class ConfigLoader {
@@ -11,20 +12,17 @@ class ConfigLoader {
 
   async init() {
     try {
-      const fileName = this.getYAMLFileNameBasedOnProtocol(
-        process.env.PROTOCOL
-      );
+      const url = process.env.CONFIG_URL;
 
-      const config = yaml.parse(
-        fs.readFileSync(path.join(__dirname, fileName), "utf8")
-      );
+      if (!url) {
+        throw new Error("Config url not found");
+      }
 
-      const schema = await $RefParser.dereference(config);
+      const response = await axios.get(url);
 
-      this.config = schema;
+      this.config = response.data;
 
-      // logger.info(">", schema);
-      return schema;
+      return response.data;
     } catch (e) {
       throw new Error(e);
     }
@@ -32,15 +30,6 @@ class ConfigLoader {
 
   getConfig() {
     return this.config;
-  }
-
-  getYAMLFileNameBasedOnProtocol(protocol) {
-    switch (protocol) {
-      case "mobility":
-        return "mob.yaml";
-      case "fis":
-        return "fis.yaml";
-    }
   }
 
   getConfigBasedOnFlow(flowId) {
