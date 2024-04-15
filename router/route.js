@@ -1,83 +1,15 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-const fs = require("fs");
-const path = require("path");
-const yaml = require("js-yaml");
 const router = require("express").Router();
 const axios = require("axios");
-const mockUrl = process.env.mockUrl,
-  callbackUrl = process.env.callbackUrl,
-  GATEWAY_URL = process.env.GATEWAY_URL;
 const {
-  insertRequest,
   getCache,
-  generateHeader,
-  deleteCache,
-  verifyHeader,
   insertSession,
   handleRequestForJsonMapper,
 } = require("../utils/utils");
-const { createBecknObject } = require("../utils/buildPayload");
 const { extractPath } = require("../utils/buildPayload");
 const { configLoader } = require("../configs/index");
 const logger = require("../utils/logger");
-
-router.post("/createHeader", async function (req, res) {
-  try {
-    const response = await generateHeader(req.body);
-    res.setHeader("Authorization", response);
-    res.setHeader("Access-Control-Expose-Headers", "*");
-    return res.send(req.body);
-  } catch (error) {
-    logger.error("/createHeader  -  ", error);
-    res.status(500).send("an error occurred");
-  }
-});
-
-router.post("/:method", async (req, res) => {
-  try {
-    const method = req.params.method,
-      body = req.body;
-    if (
-      !body?.context?.bap_uri ||
-      !body?.context?.transaction_id ||
-      (!body?.context?.bpp_uri && req.params.method !== "search")
-    ) {
-      return res.status(400).send({
-        data: "validations failed bap_uri || transactionid || bppuri missing",
-      });
-    }
-
-    body.context.bap_uri = `${callbackUrl}/ondc/`;
-    let url;
-
-    if (req.params.method == "search") {
-      url = GATEWAY_URL;
-    } else {
-      url = body.context.bpp_uri;
-    }
-
-    if (url[url.length - 1] != "/") {
-      //"add / if not exists in bap uri"
-      url = url + "/";
-    }
-
-    const header = { headers: { Authorization: await generateHeader(body) } };
-
-    insertRequest(body, req.headers);
-    const response = await axios.post(`${url}${method}`, body, header);
-
-    res.status(response.status).send(response.data);
-  } catch (err) {
-    logger.error(
-      "/:method  -  ",
-      err?.response?.data ? err?.response?.data : err.message
-    );
-    res
-      .status(err?.response?.status || 500)
-      .send(err?.response?.data ? err?.response?.data : err.message);
-  }
-});
 
 router.get("/cache", async (req, res) => {
   try {
@@ -90,67 +22,6 @@ router.get("/cache", async (req, res) => {
   }
 });
 
-router.post("/ondc/:method", async (req, res) => {
-  let body = req.body;
-
-  logger.info("/ondc/:method message recieved -  ", body);
-
-  if (process.env.ENABLE_SIGNATURE_VALIDATION === "true") {
-    const isValid = await verifyHeader(req, process.env.LOOKUP_URL);
-    if (isValid) {
-      insertRequest(body, req.headers);
-      const ack = {
-        message: {
-          ack: {
-            status: "ACK",
-          },
-        },
-      };
-      res.status(200).json(ack);
-      logger.info("/ondc/:method  -  ", req.body.context, "recieved context");
-      logger.info("/ondc/:method  -  ", ack, "response");
-    } else {
-      const nack = {
-        message: {
-          ack: {
-            status: "NACK",
-          },
-        },
-      };
-      res.status(400).json(nack);
-    }
-  } else {
-    insertRequest(body, req.headers);
-    handleRequestForJsonMapper(body);
-    const ack = {
-      message: {
-        ack: {
-          status: "ACK",
-        },
-      },
-    };
-    res.status(200).json(ack);
-  }
-});
-
-router.delete("/cache", (req, res) => {
-  try {
-    const transactionId = req.query.transactionid;
-    const deleted = deleteCache(transactionId);
-    if (deleted) {
-      res.send({
-        message: "Response data for the transaction ID has been deleted",
-      });
-    } else {
-      res.send({ message: "TransactionId not found in cache" });
-    }
-  } catch (err) {
-    logger.error("/cache  -  ", err);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-// JSON mapper Api
 router.post("/mapper/session", (req, res) => {
   const { country, cityCode, transaction_id, configName } = req.body;
 
@@ -411,7 +282,6 @@ router.post("/mapper/:config", async (req, res) => {
     console.log("MODE", mode);
 
     if (mode === "ASYNC") {
-      insertRequest(becknPayload, null);
       session.protocolCalls[config] = {
         ...session.protocolCalls[config],
         executed: true,
@@ -429,7 +299,6 @@ router.post("/mapper/:config", async (req, res) => {
         shouldRender: true,
       };
     } else {
-      insertRequest(becknPayload.action, null);
       session.protocolCalls[config] = {
         ...session.protocolCalls[config],
         executed: true,
