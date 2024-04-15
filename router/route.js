@@ -45,8 +45,6 @@ router.post("/mapper/session", (req, res) => {
 
     const session = {
       ...req.body,
-      bap_id: "mobility-staging.ondc.org",
-      bap_uri: process.env.callbackUrl,
       ttl: "PT10M",
       domain: filteredDomain,
       summary: filteredsummary,
@@ -255,18 +253,21 @@ router.post("/mapper/:config", async (req, res) => {
 
   console.log("sending Transdcaiton ID", transactionId);
   try {
-    const response = await axios.post(`http://localhost:80/createPayload`, {
-      type: session.protocolCalls[config].type,
-      config: config,
-      configName: session.configName,
-      data: payload,
-      transactionId: transactionId,
-      target: session.protocolCalls[config].target,
-      session: {
-        createSession: session.protocolCalls[config].target === "GATEWAY",
-        data: protocolSession,
-      },
-    });
+    const response = await axios.post(
+      `${process.env.PROTOCOL_SERVER_BASE_URL}createPayload`,
+      {
+        type: session.protocolCalls[config].type,
+        config: config,
+        configName: session.configName,
+        data: payload,
+        transactionId: transactionId,
+        target: session.protocolCalls[config].target,
+        session: {
+          createSession: session.protocolCalls[config].target === "GATEWAY",
+          data: protocolSession,
+        },
+      }
+    );
 
     let mode = "SYNC";
 
