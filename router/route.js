@@ -220,7 +220,6 @@ router.post("/mapper/:config", async (req, res) => {
   let session = getCache("jm_" + transactionId);
 
   logger.info("cofig> ", config);
-  console.log("configs", config);
 
   if (!session) {
     return res.status(400).send({ message: "No session exists" });
@@ -241,6 +240,21 @@ router.post("/mapper/:config", async (req, res) => {
       ...session.protocolCalls[nextRequest],
       shouldRender: true,
     };
+
+    try {
+      await axios.post(`${process.env.PROTOCOL_SERVER_BASE_URL}updateSession`, {
+        sessionData: payload,
+        transactionId: transactionId,
+      });
+    } catch (e) {
+      logger.error(
+        "Error while update session for protocol server: ",
+        e?.messaage || e
+      );
+      throw new Error({
+        message: "Error while update session for protocol server",
+      });
+    }
 
     insertSession(session);
 
