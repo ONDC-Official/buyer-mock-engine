@@ -112,10 +112,10 @@ router.post("/mapper/extractPath", (req, res) => {
 });
 
 router.post("/mapper/repeat", async (req, res) => {
-  const { transactionId, callType } = req.body;
+  const { transactionId, config } = req.body;
 
-  if (!transactionId || !callType) {
-    return res.status(400).send({ data: "missing transactionId || callType" });
+  if (!transactionId || !config) {
+    return res.status(400).send({ data: "missing transactionId || config" });
   }
 
   let session = getCache("jm_" + transactionId);
@@ -124,34 +124,36 @@ router.post("/mapper/repeat", async (req, res) => {
     return res.status(400).send({ data: "No session found." });
   }
 
-  const newProtocolCall = {};
-  let foundCall = false;
+  session.protocolCalls[config] = {
+    ...session.protocolCalls[config],
+    becknPayload: null,
+    businessPayload: null,
+    messageId: null,
+    executed: false,
+    shouldRender: true,
+  };
 
-  Object.entries(session.protocolCalls).map((item) => {
-    const [key, call] = item;
+  let nextConfig = session.protocolCalls[config].nextRequest;
 
-    if (foundCall) {
-      call.becknPayload = null;
-      call.businessPayload = null;
-      call.messageId = null;
-      call.executed = false;
-      call.shouldRender = false;
-    }
+  while (nextConfig) {
+    if (
+      !session.protocolCalls[nextConfig].shouldRender &&
+      !session.protocolCalls[nextConfig].executed
+    )
+      break;
 
-    if (call.type === callType) {
-      call.becknPayload = null;
-      call.businessPayload = null;
-      call.messageId = null;
-      call.executed = false;
-      call.shouldRender = true;
+    session.protocolCalls[nextConfig] = {
+      ...session.protocolCalls[nextConfig],
+      becknPayload: null,
+      businessPayload: null,
+      messageId: null,
+      executed: false,
+      shouldRender: false,
+    };
 
-      foundCall = true;
-    }
+    nextConfig = session.protocolCalls[nextConfig].nextRequest;
+  }
 
-    newProtocolCall[key] = call;
-  });
-
-  session.protocolCalls = newProtocolCall;
   insertSession(session);
 
   res.send({ session });
