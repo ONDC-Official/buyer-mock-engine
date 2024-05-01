@@ -25,7 +25,8 @@ const handleRequestForJsonMapper = async (
   updatedSession,
   messageId,
   sessionId,
-  response
+  response,
+  unsolicited = false
 ) => {
   const ack = {
     message: {
@@ -36,19 +37,6 @@ const handleRequestForJsonMapper = async (
   };
 
   let session = getCache("jm_" + sessionId);
-
-  // const allSession = getCache();
-  // logger.info("allSessions", allSession);
-
-  // allSession.map((ses) => {
-  //   if (!ses.startsWith("jm_")) return;
-
-  //   const sessionData = getCache(ses);
-  //   if (sessionData.transactionIds.includes(response.context.transaction_id)) {
-  //     logger.info(" got session>>>>");
-  //     session = sessionData;
-  //   }
-  // });
 
   if (!session) {
     logger.info("No session exists");
@@ -70,7 +58,7 @@ const handleRequestForJsonMapper = async (
   });
 
   // unsolicited
-  if (config === "") {
+  if (unsolicited) {
     logger.info("unsolicited call", response?.context);
 
     const action = response?.context?.action;

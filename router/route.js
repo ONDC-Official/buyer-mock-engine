@@ -187,6 +187,36 @@ router.get("/mapper/flows", (_req, res) => {
   res.send({ data: flows });
 });
 
+router.post("/mapper/unsolicited", async (req, res) => {
+  logger.info("Indise mapper unsolicited");
+  const { businessPayload, updatedSession, messageId, sessionId, response } =
+    req.body;
+
+  if (
+    !businessPayload ||
+    !updatedSession ||
+    !messageId ||
+    !sessionId ||
+    !response
+  ) {
+    return res.status(400).send({
+      message:
+        "businessPayload || updatedSession || sessionId || response || messageId not present",
+    });
+  }
+
+  handleRequestForJsonMapper(
+    businessPayload,
+    updatedSession,
+    messageId,
+    sessionId,
+    response,
+    true
+  );
+
+  res.send({ success: true });
+});
+
 router.post("/mapper/ondc", async (req, res) => {
   logger.info("Indise mapper config");
   const { businessPayload, updatedSession, messageId, sessionId, response } =
@@ -295,6 +325,11 @@ router.post("/mapper/:config", async (req, res) => {
     }
 
     session = { ...session, ...updatedSession, ...payload };
+
+    // incase session is updated by unsolicited call
+    const updatedLocalSession = getCache("jm_" + transactionId);
+
+    session = { ...session, ...updatedLocalSession };
 
     console.log("MODE", mode);
 
