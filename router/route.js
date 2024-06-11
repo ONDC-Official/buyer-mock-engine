@@ -378,6 +378,20 @@ router.post("/mapper/:config", async (req, res) => {
   }
 });
 
+router.post("/submissionId", async (req, res) => {
+  const { url } = req.body;
+
+  try {
+    const response = await axios.post(url, {});
+
+    console.log("response", response);
+
+    res.send({ id: response.data.submission_id });
+  } catch (e) {
+    res.status(400).send({ error: true, message: e.message || e });
+  }
+});
+
 router.post("/executeTransaction/:transactionId", async (req, res) => {
   const transactionId = req.params.transactionId;
 
