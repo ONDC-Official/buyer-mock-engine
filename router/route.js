@@ -189,19 +189,12 @@ router.get("/mapper/flows", (_req, res) => {
 
 router.post("/mapper/unsolicited", async (req, res) => {
   logger.info("Indise mapper unsolicited");
-  const { businessPayload, updatedSession, messageId, sessionId, response } =
-    req.body;
+  const { businessPayload, updatedSession, messageId, response } = req.body;
 
-  if (
-    !businessPayload ||
-    !updatedSession ||
-    !messageId ||
-    !sessionId ||
-    !response
-  ) {
+  if (!businessPayload || !updatedSession || !messageId || !response) {
     return res.status(400).send({
       message:
-        "businessPayload || updatedSession || sessionId || response || messageId not present",
+        "businessPayload || updatedSession|| response || messageId not present",
     });
   }
 
@@ -209,7 +202,7 @@ router.post("/mapper/unsolicited", async (req, res) => {
     businessPayload,
     updatedSession,
     messageId,
-    sessionId,
+    updatedSession?.transaction_id,
     response,
     true
   );
@@ -219,19 +212,12 @@ router.post("/mapper/unsolicited", async (req, res) => {
 
 router.post("/mapper/ondc", async (req, res) => {
   logger.info("Indise mapper config");
-  const { businessPayload, updatedSession, messageId, sessionId, response } =
-    req.body;
+  const { businessPayload, updatedSession, messageId, response } = req.body;
 
-  if (
-    !businessPayload ||
-    !updatedSession ||
-    !messageId ||
-    !sessionId ||
-    !response
-  ) {
+  if (!businessPayload || !updatedSession || !messageId || !response) {
     return res.status(400).send({
       message:
-        "businessPayload || updatedSession || sessionId || response || messageId not present",
+        "businessPayload || updatedSession || response || messageId not present",
     });
   }
 
@@ -239,7 +225,7 @@ router.post("/mapper/ondc", async (req, res) => {
     businessPayload,
     updatedSession,
     messageId,
-    sessionId,
+    updatedSession?.transaction_id,
     response
   );
 
@@ -390,6 +376,14 @@ router.post("/mapper/:config", async (req, res) => {
     logger.error("Error while sending request  -  ", e?.response?.data || e);
     return res.status(500).send({ message: "Error while sending request", e });
   }
+});
+
+router.post("/executeTransaction/:transactionId", async (req, res) => {
+  const transactionId = req.params.transactionId;
+
+  let session = getCache("jm_" + transactionId);
+
+  session.protocolCalls;
 });
 
 module.exports = router;
