@@ -32,13 +32,14 @@ class ConfigLoader {
     return this.config;
   }
 
-  getConfigBasedOnFlow(flowId) {
+  getConfigBasedOnFlow(flowId, additionalFlow) {
     let filteredInput = null;
     let filteredCalls = null;
     let filteredDomain = null;
     let filteredSessiondata = null;
     let filteredAdditionalFlows = null;
     let filteredsummary = "";
+    let additionalFlowConfig = null;
 
     this.config.flows.forEach((flow) => {
       if (flow.id === flowId) {
@@ -53,6 +54,22 @@ class ConfigLoader {
       }
     });
 
+    if (additionalFlow) {
+      this.config.flows.forEach((flow) => {
+        if (flow.id === additionalFlow) {
+          const { input, calls, sessionData, summary } = flow;
+          additionalFlowConfig = {
+            input: input,
+            summary: summary,
+            configName: additionalFlow,
+            protocolCalls: calls,
+          };
+
+          filteredSessiondata = { ...filteredSessiondata, ...sessionData };
+        }
+      });
+    }
+
     return {
       filteredCalls,
       filteredInput,
@@ -60,6 +77,7 @@ class ConfigLoader {
       filteredSessiondata,
       filteredAdditionalFlows,
       filteredsummary,
+      additionalFlowConfig,
     };
   }
 
@@ -69,6 +87,15 @@ class ConfigLoader {
         if (flow.shouldDispaly) return { key: flow.summary, value: flow.id };
       })
       .filter((flow) => flow);
+  }
+
+  getListOfAdditionalFlows(configName) {
+    return this.config.flows
+      .map((flow) => {
+        if (flow.id === configName) return flow.additionalFlows;
+      })
+      .filter((flow) => flow)
+      .flat();
   }
 }
 

@@ -6,10 +6,12 @@ const {
   getCache,
   insertSession,
   handleRequestForJsonMapper,
+  updateProtocolSessionToAdditionalFlows,
 } = require("../utils/utils");
 const { extractPath } = require("../utils/buildPayload");
 const { configLoader } = require("../configs/index");
 const logger = require("../utils/logger");
+const eventEmitter = require("../utils/eventEmitter");
 
 router.get("/cache", async (req, res) => {
   try {
@@ -22,8 +24,25 @@ router.get("/cache", async (req, res) => {
   }
 });
 
+router.get("/event/unsolicited", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const onNewEvent = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  eventEmitter.on("unsolicitedCall", onNewEvent);
+
+  req.on("close", () => {
+    eventEmitter.removeListener("unsolicitedCall", onNewEvent);
+  });
+});
+
 router.post("/mapper/session", (req, res) => {
-  const { country, cityCode, transaction_id, configName } = req.body;
+  const { country, cityCode, transaction_id, configName, additionalFlow } =
+    req.body;
 
   if (!country || !cityCode || !transaction_id || !configName) {
     return res.status(400).send({
@@ -41,7 +60,8 @@ router.post("/mapper/session", (req, res) => {
       filteredSessiondata,
       filteredAdditionalFlows,
       filteredsummary,
-    } = configLoader.getConfigBasedOnFlow(configName);
+      additionalFlowConfig,
+    } = configLoader.getConfigBasedOnFlow(configName, additionalFlow);
 
     const session = {
       ...req.body,
@@ -54,6 +74,7 @@ router.post("/mapper/session", (req, res) => {
       input: filteredInput,
       protocolCalls: filteredCalls,
       additioalFlows: filteredAdditionalFlows,
+      additionalFlowConfig: additionalFlowConfig,
     };
 
     insertSession(session);
@@ -187,6 +208,14 @@ router.get("/mapper/flows", (_req, res) => {
   res.send({ data: flows });
 });
 
+router.get("/mapper/additionalFlows/:configName", (req, res) => {
+  const configName = req.params.configName;
+
+  const additionalFlows = configLoader.getListOfAdditionalFlows(configName);
+
+  res.send({ data: additionalFlows });
+});
+
 router.post("/mapper/unsolicited", async (req, res) => {
   logger.info("Indise mapper unsolicited");
   const { businessPayload, updatedSession, messageId, response } = req.body;
@@ -243,19 +272,24 @@ router.post("/mapper/:config", async (req, res) => {
     return res.status(400).send({ message: "No session exists" });
   }
 
-  if (session.protocolCalls[config].type === "form") {
-    session.protocolCalls[config] = {
-      ...session.protocolCalls[config],
+  const isAdditionalFlowActive = session.additionalFlowActive;
+  const protocolCalls = session.additionalFlowActive
+    ? session.additionalFlowConfig.protocolCalls
+    : session.protocolCalls;
+
+  if (protocolCalls[config].type === "form") {
+    protocolCalls[config] = {
+      ...protocolCalls[config],
       executed: true,
       shouldRender: true,
       businessPayload: payload,
     };
     session = { ...session, ...payload };
 
-    const nextRequest = session.protocolCalls[config].nextRequest;
+    const nextRequest = protocolCalls[config].nextRequest;
 
-    session.protocolCalls[nextRequest] = {
-      ...session.protocolCalls[nextRequest],
+    protocolCalls[nextRequest] = {
+      ...protocolCalls[nextRequest],
       shouldRender: true,
     };
 
@@ -274,6 +308,12 @@ router.post("/mapper/:config", async (req, res) => {
       });
     }
 
+    if (isAdditionalFlowActive) {
+      session.additionalFlowConfig.protocolCalls = protocolCalls;
+    } else {
+      session.protocolCalls = protocolCalls;
+    }
+
     insertSession(session);
 
     return res.status(200).send({ session });
@@ -288,14 +328,14 @@ router.post("/mapper/:config", async (req, res) => {
     const response = await axios.post(
       `${process.env.PROTOCOL_SERVER_BASE_URL}createPayload`,
       {
-        type: session.protocolCalls[config].type,
+        type: protocolCalls[config].type,
         config: config,
         configName: session.configName,
         data: payload,
         transactionId: transactionId,
-        target: session.protocolCalls[config].target,
+        target: protocolCalls[config].target,
         session: {
-          createSession: session.protocolCalls[config].target === "GATEWAY",
+          createSession: protocolCalls[config].target === "GATEWAY",
           data: protocolSession,
         },
       }
@@ -320,8 +360,8 @@ router.post("/mapper/:config", async (req, res) => {
     console.log("MODE", mode);
 
     if (mode === "ASYNC") {
-      session.protocolCalls[config] = {
-        ...session.protocolCalls[config],
+      protocolCalls[config] = {
+        ...protocolCalls[config],
         executed: true,
         shouldRender: true,
         becknPayload: becknPayload,
@@ -330,15 +370,15 @@ router.post("/mapper/:config", async (req, res) => {
         becknResponse: becknReponse,
       };
 
-      const nextRequest = session.protocolCalls[config].nextRequest;
+      const nextRequest = protocolCalls[config].nextRequest;
 
-      session.protocolCalls[nextRequest] = {
-        ...session.protocolCalls[nextRequest],
+      protocolCalls[nextRequest] = {
+        ...protocolCalls[nextRequest],
         shouldRender: true,
       };
     } else {
-      session.protocolCalls[config] = {
-        ...session.protocolCalls[config],
+      protocolCalls[config] = {
+        ...protocolCalls[config],
         executed: true,
         shouldRender: true,
         becknPayload: becknPayload.action,
@@ -347,10 +387,10 @@ router.post("/mapper/:config", async (req, res) => {
         // becknResponse: becknReponse,
       };
 
-      let nextRequest = session.protocolCalls[config].nextRequest;
+      let nextRequest = protocolCalls[config].nextRequest;
 
-      session.protocolCalls[nextRequest] = {
-        ...session.protocolCalls[nextRequest],
+      protocolCalls[nextRequest] = {
+        ...protocolCalls[nextRequest],
         executed: true,
         shouldRender: true,
         becknPayload: becknPayload.on_action,
@@ -359,14 +399,34 @@ router.post("/mapper/:config", async (req, res) => {
         // becknResponse: becknReponse,
       };
 
-      nextRequest = session.protocolCalls[nextRequest].nextRequest;
+      nextRequest = protocolCalls[nextRequest].nextRequest;
 
       if (nextRequest) {
-        session.protocolCalls[nextRequest] = {
-          ...session.protocolCalls[nextRequest],
+        protocolCalls[nextRequest] = {
+          ...protocolCalls[nextRequest],
           shouldRender: true,
         };
+      } else {
+        // case when transaction is complete
+        // check for additional flows
+        // if exists continue with additional flows
+
+        if (session?.additionalFlowConfig) {
+          session.additionalFlowActive = true;
+
+          session.additionalFlowConfig.protocolCalls[
+            session.additionalFlowStartPoint
+          ].shouldRender = true;
+        }
+
+        updateProtocolSessionToAdditionalFlows(session);
       }
+    }
+
+    if (isAdditionalFlowActive) {
+      session.additionalFlowConfig.protocolCalls = protocolCalls;
+    } else {
+      session.protocolCalls = protocolCalls;
     }
 
     insertSession(session);
@@ -384,20 +444,10 @@ router.post("/submissionId", async (req, res) => {
   try {
     const response = await axios.post(url, {});
 
-    console.log("response", response);
-
     res.send({ id: response.data.submission_id });
   } catch (e) {
     res.status(400).send({ error: true, message: e.message || e });
   }
-});
-
-router.post("/executeTransaction/:transactionId", async (req, res) => {
-  const transactionId = req.params.transactionId;
-
-  let session = getCache("jm_" + transactionId);
-
-  session.protocolCalls;
 });
 
 module.exports = router;
