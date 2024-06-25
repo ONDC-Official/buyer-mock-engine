@@ -325,6 +325,8 @@ router.post("/mapper/:config", async (req, res) => {
 
   if (protocolCalls[config].target === "GATEWAY") {
     delete protocolSession.bpp_id;
+  } else {
+    payload.bpp_id = protocolSession.bpp_id;
   }
 
   console.log("sending Transdcaiton ID", transactionId);
