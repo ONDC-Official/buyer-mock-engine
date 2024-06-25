@@ -323,6 +323,10 @@ router.post("/mapper/:config", async (req, res) => {
   delete protocolSession.input;
   delete protocolSession.protocolCalls;
 
+  if (protocolCalls[config].target === "GATEWAY") {
+    delete protocolSession.bpp_id;
+  }
+
   console.log("sending Transdcaiton ID", transactionId);
   try {
     const response = await axios.post(
