@@ -12,7 +12,7 @@ const eventEmitter = new events.EventEmitter();
 configLoader
   .init()
   .then((data) => {
-    logger.info("Config loaded successfully.", data.flows[3]);
+    logger.info("Config loaded successfully.");
 
     app.use(bodyParser.json({ limit: "10mb" }));
     app.use(cors());

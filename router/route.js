@@ -7,6 +7,7 @@ const {
   insertSession,
   handleRequestForJsonMapper,
   updateProtocolSessionToAdditionalFlows,
+  findPaylaodAgainstMessageId,
 } = require("../utils/utils");
 const { extractPath } = require("../utils/buildPayload");
 const { configLoader } = require("../configs/index");
@@ -325,6 +326,8 @@ router.post("/mapper/:config", async (req, res) => {
 
   if (protocolCalls[config].target === "GATEWAY") {
     delete protocolSession.bpp_id;
+  } else {
+    payload.bpp_id = protocolSession.bpp_id;
   }
 
   console.log("sending Transdcaiton ID", transactionId);
@@ -333,7 +336,7 @@ router.post("/mapper/:config", async (req, res) => {
       `${process.env.PROTOCOL_SERVER_BASE_URL}createPayload`,
       {
         type: protocolCalls[config].type,
-        config: config,
+        config: protocolCalls[config].type,
         configName: session.configName,
         data: payload,
         transactionId: transactionId,
@@ -397,8 +400,14 @@ router.post("/mapper/:config", async (req, res) => {
         ...protocolCalls[nextRequest],
         executed: true,
         shouldRender: true,
-        becknPayload: becknPayload.on_action,
-        businessPayload: businessPayload,
+        becknPayload: findPaylaodAgainstMessageId(
+          becknPayload.on_action,
+          becknPayload.action.context.message_id
+        ),
+        businessPayload: findPaylaodAgainstMessageId(
+          businessPayload,
+          becknPayload.action.context.message_id
+        ),
         // messageId: becknPayload.action.context.message_id,
         // becknResponse: becknReponse,
       };
