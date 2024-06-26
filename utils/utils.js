@@ -180,9 +180,22 @@ const updateProtocolSessionToAdditionalFlows = async (session) => {
   }
 };
 
+const findPaylaodAgainstMessageId = (payload, msg_id) => {
+  let filteredPaylaod = null;
+
+  payload.map((item) => {
+    if (item.context.message_id === msg_id) {
+      filteredPaylaod = item;
+    }
+  });
+
+  return [filteredPaylaod];
+};
+
 module.exports = {
   getCache,
   insertSession,
   handleRequestForJsonMapper,
   updateProtocolSessionToAdditionalFlows,
+  findPaylaodAgainstMessageId,
 };
