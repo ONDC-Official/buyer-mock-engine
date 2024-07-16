@@ -131,7 +131,16 @@ const handleRequestForJsonMapper = async (
   const thirdRequest = protocolCalls[nextRequest]?.nextRequest;
   let isAdditionalFlowActive = false;
   if (thirdRequest) {
-    protocolCalls[thirdRequest].shouldRender = true;
+    if (
+      protocolCalls[thirdRequest].isSkipable &&
+      eval(protocolCalls[thirdRequest].isSkipable.condition)
+    ) {
+      protocolCalls[
+        protocolCalls[thirdRequest].isSkipable.nextRequest
+      ].shouldRender = true;
+    } else {
+      protocolCalls[thirdRequest].shouldRender = true;
+    }
   } else {
     // case when transaction is complete
     // check for additional flows

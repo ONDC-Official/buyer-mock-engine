@@ -415,6 +415,8 @@ router.post("/mapper/:config", async (req, res) => {
       nextRequest = protocolCalls[nextRequest].nextRequest;
 
       if (nextRequest) {
+        if (protocolCalls[nextRequest].isSkipable) {
+        }
         protocolCalls[nextRequest] = {
           ...protocolCalls[nextRequest],
           shouldRender: true,
