@@ -1,5 +1,4 @@
 import express from "express";
-import bodyParser from "body-parser";
 import events from "events";
 import cors from "cors";
 require("dotenv").config();
