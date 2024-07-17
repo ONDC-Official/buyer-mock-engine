@@ -1,22 +1,26 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-const router = require("express").Router();
-const axios = require("axios");
-const {
+import express from "express";
+export const router = express.Router();
+import axios from "axios";
+import {
   getCache,
   insertSession,
   handleRequestForJsonMapper,
   updateProtocolSessionToAdditionalFlows,
   findPaylaodAgainstMessageId,
-} = require("../utils/utils");
-const { extractPath } = require("../utils/buildPayload");
-const { configLoader } = require("../configs/index");
-const logger = require("../utils/logger");
-const eventEmitter = require("../utils/eventEmitter");
+} from "../utils/utils";
+import { extractPath } from "../utils/buildPayload";
+import { configLoader } from "../configs/index";
+import { logger } from "../utils/logger";
+import { eventEmitter } from "../utils/eventEmitter";
+import { Request, Response } from "express";
 
-router.get("/cache", async (req, res) => {
+router.get("/cache", async (req: Request, res: Response) => {
   try {
-    const response = getCache(req.query.transactionid) || {
+    if (typeof req.query.transactionid !== "string") {
+      return res.status(400).send({ message: "Invalid transactionId" });
+    }
+    const response = getCache(req.query.transactionid ?? "") || {
       message: "TransactionId does not have any data",
     };
     res.send(response);
@@ -25,12 +29,12 @@ router.get("/cache", async (req, res) => {
   }
 });
 
-router.get("/event/unsolicited", (req, res) => {
+router.get("/event/unsolicited", (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
 
-  const onNewEvent = (data) => {
+  const onNewEvent = (data: any) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
@@ -41,7 +45,7 @@ router.get("/event/unsolicited", (req, res) => {
   });
 });
 
-router.post("/mapper/session", (req, res) => {
+router.post("/mapper/session", (req: Request, res: Response) => {
   const { country, cityCode, transaction_id, configName, additionalFlow } =
     req.body;
 
@@ -86,7 +90,7 @@ router.post("/mapper/session", (req, res) => {
   }
 });
 
-router.post("/mapper/timeout", async (req, res) => {
+router.post("/mapper/timeout", async (req: Request, res: Response) => {
   const { config, transactionId } = req.body;
 
   if (!config || !transactionId) {
@@ -117,7 +121,7 @@ router.post("/mapper/timeout", async (req, res) => {
   return res.status(200).send({ session });
 });
 
-router.post("/mapper/extractPath", (req, res) => {
+router.post("/mapper/extractPath", (req: Request, res: Response) => {
   const { path, obj } = req.body;
 
   if (!path || !obj) {
@@ -133,7 +137,7 @@ router.post("/mapper/extractPath", (req, res) => {
   }
 });
 
-router.post("/mapper/repeat", async (req, res) => {
+router.post("/mapper/repeat", async (req: Request, res: Response) => {
   const { transactionId, config } = req.body;
 
   if (!transactionId || !config) {
@@ -181,7 +185,7 @@ router.post("/mapper/repeat", async (req, res) => {
   res.send({ session });
 });
 
-router.post("/mapper/addFlow", (req, res) => {
+router.post("/mapper/addFlow", (req: Request, res: Response) => {
   const { configName, transactionId } = req.body;
 
   let session = getCache("jm_" + transactionId);
@@ -201,7 +205,7 @@ router.post("/mapper/addFlow", (req, res) => {
   res.send({ session });
 });
 
-router.get("/mapper/flows", (_req, res) => {
+router.get("/mapper/flows", (_req: Request, res: Response) => {
   const flows = configLoader.getListOfFlow();
 
   logger.info("Flows", flows);
@@ -209,15 +213,18 @@ router.get("/mapper/flows", (_req, res) => {
   res.send({ data: flows });
 });
 
-router.get("/mapper/additionalFlows/:configName", (req, res) => {
-  const configName = req.params.configName;
+router.get(
+  "/mapper/additionalFlows/:configName",
+  (req: Request, res: Response) => {
+    const configName = req.params.configName;
 
-  const additionalFlows = configLoader.getListOfAdditionalFlows(configName);
+    const additionalFlows = configLoader.getListOfAdditionalFlows(configName);
 
-  res.send({ data: additionalFlows });
-});
+    res.send({ data: additionalFlows });
+  }
+);
 
-router.post("/mapper/unsolicited", async (req, res) => {
+router.post("/mapper/unsolicited", async (req: Request, res: Response) => {
   logger.info("Indise mapper unsolicited");
   const { businessPayload, updatedSession, messageId, response } = req.body;
 
@@ -240,7 +247,7 @@ router.post("/mapper/unsolicited", async (req, res) => {
   res.send({ success: true });
 });
 
-router.post("/mapper/ondc", async (req, res) => {
+router.post("/mapper/ondc", async (req: Request, res: Response) => {
   logger.info("Indise mapper config");
   const { businessPayload, updatedSession, messageId, response } = req.body;
 
@@ -262,7 +269,7 @@ router.post("/mapper/ondc", async (req, res) => {
   res.send({ success: true });
 });
 
-router.post("/mapper/:config", async (req, res) => {
+router.post("/mapper/:config", async (req: Request, res: Response) => {
   const { transactionId, payload } = req.body;
   const config = req.params.config;
   let session = getCache("jm_" + transactionId);
@@ -299,14 +306,12 @@ router.post("/mapper/:config", async (req, res) => {
         sessionData: payload,
         transactionId: transactionId,
       });
-    } catch (e) {
+    } catch (e: any) {
       logger.error(
         "Error while update session for protocol server: ",
         e?.messaage || e
       );
-      throw new Error({
-        message: "Error while update session for protocol server",
-      });
+      throw new Error("Error while update session for protocol server");
     }
 
     if (isAdditionalFlowActive) {
@@ -447,22 +452,22 @@ router.post("/mapper/:config", async (req, res) => {
     insertSession(session);
 
     res.status(200).send({ response: response.data, session });
-  } catch (e) {
+  } catch (e: any) {
     logger.error("Error while sending request  -  ", e?.response?.data || e);
     return res.status(500).send({ message: "Error while sending request", e });
   }
 });
 
-router.post("/submissionId", async (req, res) => {
+router.post("/submissionId", async (req: Request, res: Response) => {
   const { url } = req.body;
 
   try {
     const response = await axios.post(url, {});
 
     res.send({ id: response.data.submission_id });
-  } catch (e) {
+  } catch (e: any) {
     res.status(400).send({ error: true, message: e.message || e });
   }
 });
 
-module.exports = router;
+// module.exports = router;

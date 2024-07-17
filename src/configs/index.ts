@@ -1,11 +1,12 @@
-const fs = require("fs");
-const yaml = require("yaml");
-const path = require("path");
-const $RefParser = require("@apidevtools/json-schema-ref-parser");
-const axios = require("axios");
-const logger = require("../utils/logger");
+import fs from "fs";
+import yaml from "yaml";
+import path from "path";
+import $RefParser from "@apidevtools/json-schema-ref-parser";
+import axios from "axios";
+import { logger } from "../utils/logger";
 
 class ConfigLoader {
+  config: any;
   constructor() {
     this.config = null;
   }
@@ -23,7 +24,7 @@ class ConfigLoader {
       this.config = response.data;
 
       return response.data;
-    } catch (e) {
+    } catch (e: any) {
       throw new Error(e);
     }
   }
@@ -32,16 +33,16 @@ class ConfigLoader {
     return this.config;
   }
 
-  getConfigBasedOnFlow(flowId, additionalFlow) {
-    let filteredInput = null;
-    let filteredCalls = null;
-    let filteredDomain = null;
-    let filteredSessiondata = null;
-    let filteredAdditionalFlows = null;
+  getConfigBasedOnFlow(flowId: string, additionalFlow?: any) {
+    let filteredInput: any = null;
+    let filteredCalls: any = null;
+    let filteredDomain: string | null = null;
+    let filteredSessiondata: any = null;
+    let filteredAdditionalFlows: any = null;
     let filteredsummary = "";
-    let additionalFlowConfig = null;
+    let additionalFlowConfig: any = null;
 
-    this.config.flows.forEach((flow) => {
+    this.config.flows.forEach((flow: any) => {
       if (flow.id === flowId) {
         const { input, calls, domain, sessionData, additioalFlows, summary } =
           flow;
@@ -55,7 +56,7 @@ class ConfigLoader {
     });
 
     if (additionalFlow) {
-      this.config.flows.forEach((flow) => {
+      this.config.flows.forEach((flow: any) => {
         if (flow.id === additionalFlow) {
           const { input, calls, sessionData, summary } = flow;
           additionalFlowConfig = {
@@ -83,22 +84,22 @@ class ConfigLoader {
 
   getListOfFlow() {
     return this.config.flows
-      .map((flow) => {
+      .map((flow: any) => {
         if (flow.shouldDispaly) return { key: flow.summary, value: flow.id };
       })
-      .filter((flow) => flow);
+      .filter((flow: any) => flow);
   }
 
-  getListOfAdditionalFlows(configName) {
+  getListOfAdditionalFlows(configName: string) {
     return this.config.flows
-      .map((flow) => {
+      .map((flow: any) => {
         if (flow.id === configName) return flow.additionalFlows;
       })
-      .filter((flow) => flow)
+      .filter((flow: any) => flow)
       .flat();
   }
 }
 
-const configLoader = new ConfigLoader();
+export const configLoader = new ConfigLoader();
 
-module.exports = { configLoader };
+// module.exports = { configLoader };

@@ -1,8 +1,8 @@
-const { v4: uuidv4 } = require("uuid");
-const logger = require("./logger");
+import { v4 as uuidv4 } from "uuid";
+import { logger } from "./logger";
 
 // function used inside eval function
-const buildTags = (tags) => {
+const buildTags = (tags: any) => {
   return Object.keys(tags).map((key) => {
     const subObject = tags[key];
     const list = Object.keys(subObject).map((subKey) => {
@@ -25,7 +25,7 @@ const buildTags = (tags) => {
   });
 };
 
-const createNestedField = (obj, path, value) => {
+const createNestedField = (obj: any, path: string, value: any) => {
   const keys = path.split(".");
   let currentObj = obj;
 
@@ -35,7 +35,11 @@ const createNestedField = (obj, path, value) => {
 
     if (isArrayIndex) {
       const arrayKey = key.substring(0, key.indexOf("["));
-      const index = parseInt(key.match(/\[(\d+)\]/)[1], 10);
+      const extract = key.match(/\[(\d+)\]/);
+      if (!extract) {
+        throw new Error("Invalid array index");
+      }
+      const index = parseInt(extract[1], 10);
 
       if (!currentObj[arrayKey]) {
         currentObj[arrayKey] = [];
@@ -57,7 +61,12 @@ const createNestedField = (obj, path, value) => {
   currentObj[keys[keys.length - 1]] = value;
 };
 
-const createPayload = (config, action, data, session) => {
+const createPayload = (
+  config: any,
+  action: string,
+  data: any,
+  session: any
+) => {
   const payload = {};
   const startPoint = "START";
   const endPoint = "END";
@@ -69,7 +78,7 @@ const createPayload = (config, action, data, session) => {
   const timestamp = new Date().toISOString();
   const newTranscationId = uuidv4();
 
-  config.map((item) => {
+  config.map((item: any) => {
     if (eval(item.value) && (item.check ? eval(item.check) : true))
       createNestedField(
         payload,
@@ -81,12 +90,12 @@ const createPayload = (config, action, data, session) => {
   return payload;
 };
 
-const constructValueObject = (data, key = "business_key") => {
-  const dataArray = data.split(",").map((val) => val.trim());
-  let objArray = [];
+const constructValueObject = (data: string, key = "business_key") => {
+  const dataArray = data.split(",").map((val: string) => val.trim());
+  let objArray: any[] = [];
 
   dataArray.forEach((item) => {
-    const obj = {};
+    const obj: any = {};
     const itemArray = item.split(":").map((val) => val.trim());
     obj[key] = itemArray[0];
     const value = "obj." + itemArray[1];
@@ -97,7 +106,7 @@ const constructValueObject = (data, key = "business_key") => {
   return objArray;
 };
 
-const constructPath = (data) => {
+const constructPath = (data: string) => {
   if (data.startsWith(".")) {
     data = data.substring(1, data.length);
   }
@@ -106,7 +115,7 @@ const constructPath = (data) => {
   return data.split(".").join("?.");
 };
 
-const decodeInputString = (input) => {
+const decodeInputString = (input: string) => {
   const tokens = input
     .split(/([\[\]\{\}])/)
     .filter((token) => token.trim() !== "");
@@ -116,7 +125,13 @@ const decodeInputString = (input) => {
   }
 
   let i = 0;
-  let initalConfig = {};
+  let initalConfig: {
+    path?: string;
+    type?: string;
+    value?: any;
+    commanData?: any;
+    check?: string;
+  } = {};
   let currentConfig = initalConfig;
   let lastTokenSquareBracket = false;
   let lastTokenCurlyBracket = false;
@@ -172,9 +187,9 @@ const decodeInputString = (input) => {
   return initalConfig;
 };
 
-const extractData = (obj, config, commData = {}) => {
+const extractData = (obj: Record<string, any>, config: any, commData = {}) => {
   if (config?.commanData?.length) {
-    config.commanData.map((item) => {
+    config.commanData.map((item: any) => {
       createNestedField(
         commData,
         item.business_key,
@@ -187,8 +202,8 @@ const extractData = (obj, config, commData = {}) => {
 
   const item = config.value;
   if (item.type === "Array") {
-    const response = [];
-    eval(item.path)?.some((data) => {
+    const response: any = [];
+    eval(item.path)?.some((data: any) => {
       const _ = data;
       if (item.check ? eval(item.check) : true) {
         const result = extractData(data, item, commData);
@@ -199,13 +214,13 @@ const extractData = (obj, config, commData = {}) => {
     });
     return response;
   } else if (item.type === "String") {
-    let data = {};
+    let data: any = {};
     data[`${item.key}`] = eval(item.path);
 
     return { ...data, ...commData };
   } else if (item.type === "Object") {
-    const data = {};
-    item.value.map((val) => {
+    const data: any = {};
+    item.value.map((val: any) => {
       if (!eval(val.value)) {
         throw new Error(`key ${val.value} not found`);
       }
@@ -215,11 +230,11 @@ const extractData = (obj, config, commData = {}) => {
   }
 };
 
-const createBusinessPayload = (myconfig, obj) => {
+const createBusinessPayload = (myconfig: any, obj: any) => {
   const payload = {};
 
   try {
-    myconfig.map((conf) => {
+    myconfig.map((conf: any) => {
       if (conf.extractionPath) {
         conf = {
           ...conf,
@@ -243,7 +258,12 @@ const createBusinessPayload = (myconfig, obj) => {
   }
 };
 
-const createBecknObject = (session, call, data, protocol) => {
+export const createBecknObject = (
+  session: any,
+  call: any,
+  data: any,
+  protocol: any
+) => {
   // const parsedYaml = yaml.load(getYamlConfig(session.configName));
   const config = protocol;
   if (config.sessionData) {
@@ -261,7 +281,12 @@ const createBecknObject = (session, call, data, protocol) => {
   return { payload, session };
 };
 
-const extractBusinessData = (type, payload, session, protocol) => {
+export const extractBusinessData = (
+  type: any,
+  payload: any,
+  session: any,
+  protocol: any
+) => {
   // const parsedYaml = yaml.load(getYamlConfig(session.configName));
 
   if (protocol.sessionData) {
@@ -277,7 +302,7 @@ const extractBusinessData = (type, payload, session, protocol) => {
   return { result, session };
 };
 
-const extractPath = (path, obj) => {
+export const extractPath = (path: string, obj: Record<string, any>) => {
   const payload = {};
 
   try {

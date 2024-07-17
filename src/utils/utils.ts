@@ -1,15 +1,15 @@
-const cache = require("node-cache");
-const {
+import cache from "node-cache";
+import {
   createAuthorizationHeader,
   isSignatureValid,
-} = require("ondc-crypto-sdk-nodejs");
-const axios = require("axios");
-const { extractBusinessData } = require("./buildPayload");
+} from "ondc-crypto-sdk-nodejs";
+import axios from "axios";
+import { extractBusinessData } from "./buildPayload";
 const myCache = new cache({ stdTTL: 100, checkperiod: 120 });
-const logger = require("./logger");
-const eventEmitter = require("./eventEmitter");
+import { logger } from "./logger";
+import { eventEmitter } from "./eventEmitter";
 
-function getCache(key) {
+export function getCache(key: string | undefined): any {
   if (key === undefined || key === "") {
     return myCache.keys();
   }
@@ -17,16 +17,16 @@ function getCache(key) {
   return myCache.get(key);
 }
 
-const insertSession = (session) => {
+export const insertSession = (session: any) => {
   myCache.set("jm_" + session.transaction_id, session, 86400);
 };
 
-const handleRequestForJsonMapper = async (
-  businessPayload,
-  updatedSession,
-  messageId,
-  sessionId,
-  response,
+export const handleRequestForJsonMapper = async (
+  businessPayload: Record<string, any>,
+  updatedSession: any,
+  messageId: string,
+  sessionId: string,
+  response: any,
   unsolicited = false
 ) => {
   const ack = {
@@ -53,7 +53,7 @@ const handleRequestForJsonMapper = async (
 
   const protocolCallsEntries = Object.entries(protocolCalls);
 
-  protocolCallsEntries.map((item, index) => {
+  protocolCallsEntries.map((item: any, index) => {
     const [key, value] = item;
     if (value.messageId === messageId) {
       config = key;
@@ -170,7 +170,7 @@ const handleRequestForJsonMapper = async (
   insertSession(session);
 };
 
-const updateProtocolSessionToAdditionalFlows = async (session) => {
+export const updateProtocolSessionToAdditionalFlows = async (session: any) => {
   session.configName = session.additionalFlowConfig.configName;
 
   try {
@@ -178,21 +178,22 @@ const updateProtocolSessionToAdditionalFlows = async (session) => {
       sessionData: session,
       transactionId: session.transaction_id,
     });
-  } catch (e) {
+  } catch (e: any) {
     logger.error(
       "Error while update session for protocol server: ",
       e?.messaage || e
     );
-    throw new Error({
-      message: "Error while update session for protocol server",
-    });
+    throw new Error("Error while update session for protocol server");
   }
 };
 
-const findPaylaodAgainstMessageId = (payload, msg_id) => {
+export const findPaylaodAgainstMessageId = (
+  payload: Record<string, any>,
+  msg_id: any
+) => {
   let filteredPaylaod = null;
 
-  payload.map((item) => {
+  payload.map((item: any) => {
     if (item.context.message_id === msg_id) {
       filteredPaylaod = item;
     }
@@ -201,10 +202,10 @@ const findPaylaodAgainstMessageId = (payload, msg_id) => {
   return [filteredPaylaod];
 };
 
-module.exports = {
-  getCache,
-  insertSession,
-  handleRequestForJsonMapper,
-  updateProtocolSessionToAdditionalFlows,
-  findPaylaodAgainstMessageId,
-};
+// module.exports = {
+//   getCache,
+//   insertSession,
+//   handleRequestForJsonMapper,
+//   updateProtocolSessionToAdditionalFlows,
+//   findPaylaodAgainstMessageId,
+// };
