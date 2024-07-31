@@ -18,9 +18,13 @@ import { Request, Response } from "express";
 router.get("/cache", async (req: Request, res: Response) => {
   try {
     if (typeof req.query.transactionid !== "string") {
-      return res.status(400).send({ message: "Invalid transactionId" });
+      const allCache = getCache("") || {
+        message: "TransactionId does not have any data",
+      };
+
+      return res.status(200).send(allCache);
     }
-    const response = getCache(req.query.transactionid ?? "") || {
+    const response = getCache(req.query.transactionid) || {
       message: "TransactionId does not have any data",
     };
     res.send(response);
