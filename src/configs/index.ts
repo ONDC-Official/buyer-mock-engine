@@ -1,6 +1,3 @@
-import fs from "fs";
-import yaml from "yaml";
-import path from "path";
 import $RefParser from "@apidevtools/json-schema-ref-parser";
 import axios from "axios";
 import { logger } from "../utils/logger";
@@ -13,17 +10,27 @@ class ConfigLoader {
 
   async init() {
     try {
-      const url = process.env.CONFIG_URL;
+      const localConfig = process.env.LOAD_LOCAL_CONFIG;
 
-      if (!url) {
-        throw new Error("Config url not found");
+      if (localConfig === "true") {
+        const schema = await $RefParser.dereference("config/index.yaml");
+
+        this.config = schema;
+
+        return schema;
+      } else {
+        const url = process.env.CONFIG_URL;
+
+        if (!url) {
+          throw new Error("Config url not found");
+        }
+
+        const response = await axios.get(url);
+
+        this.config = response.data;
+
+        return response.data;
       }
-
-      const response = await axios.get(url);
-
-      this.config = response.data;
-
-      return response.data;
     } catch (e: any) {
       throw new Error(e);
     }

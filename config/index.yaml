@@ -1,0 +1,45 @@
+flows:
+  - summary: Invoice Based Loans
+    id: invoice-loan-flow-1
+    shouldDispaly: true
+    input:
+      $ref: ./invoice-loan-flow-1/input.yaml
+    calls:
+      $ref: ./invoice-loan-flow-1/protocolCalls.yaml
+    additionalFlows:
+      - key: Missed-EMI Payment
+        value: invoice-loan-missed-emi-flow-1
+      - key: Pre-Part Payment
+        value: invoice-loan-per-part-payment-flow-1
+      - key: Loan Foreclosure
+        value: invoice-loan-foreclosure-flow-1
+  - summary: Missed-EMI Payment
+    id: invoice-loan-missed-emi-flow-1
+    shouldDispaly: false
+    sessionData:
+      additionalFlowStartPoint: update
+      additionalFlowActive: false
+    input:
+      $ref: ./invoice-loan-missed-emi-flow-1/input.yaml
+    calls:
+      $ref: ./invoice-loan-missed-emi-flow-1/protocolCalls.yaml
+  - summary: Pre-Part Payment
+    id: invoice-loan-per-part-payment-flow-1
+    shouldDispaly: false
+    sessionData:
+      additionalFlowStartPoint: update
+      additionalFlowActive: false
+    input:
+      $ref: ./invoice-loan-per-part-payment-flow-1/input.yaml
+    calls:
+      $ref: ./invoice-loan-per-part-payment-flow-1/protocolCalls.yaml
+  - summary: Loan Foreclosure
+    id: invoice-loan-foreclosure-flow-1
+    shouldDispaly: false
+    sessionData:
+      additionalFlowStartPoint: update
+      additionalFlowActive: false
+    input:
+      $ref: ./invoice-loan-foreclosure-flow-1/input.yaml
+    calls:
+      $ref: ./invoice-loan-foreclosure-flow-1/protocolCalls.yaml

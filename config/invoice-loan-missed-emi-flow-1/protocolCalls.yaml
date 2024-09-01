@@ -1,0 +1,18 @@
+update:
+  type: "update"
+  target: "NP"
+  executed: false
+  shouldRender: false
+  config: "update"
+  nextRequest: on_update
+  preRequest: "null"
+  isCollapsed: false
+
+on_update:
+  type: "on_update"
+  executed: false
+  shouldRender: false
+  config: "on_update"
+  nextRequest: null
+  preRequest: "update"
+  isCollapsed: false
