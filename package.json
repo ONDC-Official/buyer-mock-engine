@@ -6,7 +6,7 @@
   "scripts": {
     "start-dev-mob": "nodemon -r dotenv/config src/app.ts dotenv_config_path=.env.dev.mob dotenv_config_debug=true",
     "start-dev-fis": "nodemon -r dotenv/config src/app.ts dotenv_config_path=.env.dev.fis dotenv_config_debug=true",
-    "dev": "nodemon -r dotenv/config src/app.ts dotenv_config_path=.env.dev dotenv_config_debug=true"
+    "dev": "nodemon -r dotenv/config src/app.ts dotenv_config_path=.env dotenv_config_debug=true"
   },
   "author": "",
   "license": "ISC",
