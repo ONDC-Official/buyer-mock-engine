@@ -98,18 +98,6 @@ Follow initialization of submodule.
 
 # How to run - local
 
-- Clone the repo [https://github.com/ONDC-Official/buyer-mock-engine]
-
-```
-git clone https://github.com/ONDC-Official/buyer-mock-engine
-```
-
-- Checkout to master branch
-
-```
-git checkout master
-```
-
 - Install dependencies
 
 ```
