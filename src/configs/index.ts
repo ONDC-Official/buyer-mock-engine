@@ -13,7 +13,14 @@ class ConfigLoader {
       const localConfig = process.env.LOAD_LOCAL_CONFIG;
 
       if (localConfig === "true") {
-        const schema = await $RefParser.dereference("config/index.yaml");
+        const localConfigFileName = process.env.CONFIG_FILE_NAME;
+
+        if (!localConfigFileName) {
+          throw new Error("Env variable 'CONFIG_FILE_NAME' not found");
+        }
+        const schema = await $RefParser.dereference(
+          `buyer-mock-config/build/${localConfigFileName}`
+        );
 
         this.config = schema;
 

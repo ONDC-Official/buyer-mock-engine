@@ -1,0 +1,4 @@
+[submodule "buyer-mock-config"]
+	path = buyer-mock-config
+	url = https://github.com/ONDC-Official/buyer-mock-config
+	branch = master
