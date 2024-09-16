@@ -16,6 +16,7 @@ import { eventEmitter } from "../utils/eventEmitter";
 import { Request, Response } from "express";
 
 router.get("/cache", async (req: Request, res: Response) => {
+  logger.info("/cache api controller");
   try {
     if (typeof req.query.transactionid !== "string") {
       const allCache = getCache("") || {
@@ -28,8 +29,9 @@ router.get("/cache", async (req: Request, res: Response) => {
       message: "TransactionId does not have any data",
     };
     res.send(response);
+    logger.info("/cache api executed");
   } catch (err) {
-    logger.error("/cache  -  ", err);
+    logger.error("/cache  error -  ", err);
   }
 });
 
@@ -39,6 +41,7 @@ router.get("/event/unsolicited", (req: Request, res: Response) => {
   res.setHeader("Connection", "keep-alive");
 
   const onNewEvent = (data: any) => {
+    logger.info("/event/unsolicited executed");
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
@@ -50,16 +53,20 @@ router.get("/event/unsolicited", (req: Request, res: Response) => {
 });
 
 router.post("/mapper/session", (req: Request, res: Response) => {
+  logger.info("/mapper/session api controller");
   const { country, cityCode, transaction_id, configName, additionalFlow } =
     req.body;
 
+  logger.debug("/mapper/session payload" + JSON.stringify(req.body));
+
   if (!country || !cityCode || !transaction_id || !configName) {
+    logger.error(
+      "validations failed  country || cityCode || transaction_id || configName missing"
+    );
     return res.status(400).send({
       data: "validations failed  country || cityCode || transaction_id || configName missing",
     });
   }
-
-  logger.info("body>>>>> /mapper/session  -  ", req.body);
 
   try {
     const {
@@ -88,16 +95,25 @@ router.post("/mapper/session", (req: Request, res: Response) => {
 
     insertSession(session);
     res.send({ sucess: true, data: session });
+    logger.info("/mapper/session api executed");
   } catch (e) {
-    logger.error("Error while creating session  -  ", e);
+    logger.error("/mapper/session error -  ", e);
     res.status(500).send("Internal Server Error");
   }
 });
 
 router.post("/mapper/timeout", async (req: Request, res: Response) => {
+  logger.info(`${req.body?.transactionId} - /mapper/timeout api controller`);
   const { config, transactionId } = req.body;
 
+  logger.debug(
+    `${transactionId} - /mapper/timeout api payload - ${JSON.stringify(
+      req.body
+    )}`
+  );
+
   if (!config || !transactionId) {
+    logger.error("validations failed config || transactionid missing");
     return res
       .status(400)
       .send({ data: "validations failed config || transactionid missing" });
@@ -106,6 +122,7 @@ router.post("/mapper/timeout", async (req: Request, res: Response) => {
   let session = getCache("jm_" + transactionId);
 
   if (!session) {
+    logger.error("No session found.");
     return res.status(400).send({ data: "No session found." });
   }
 
@@ -122,35 +139,50 @@ router.post("/mapper/timeout", async (req: Request, res: Response) => {
   };
 
   insertSession(session);
+  logger.info("/mapper/timeout api executed");
   return res.status(200).send({ session });
 });
 
 router.post("/mapper/extractPath", (req: Request, res: Response) => {
+  logger.info(`/mapper/extractPath api controller`);
   const { path, obj } = req.body;
 
+  logger.debug(`/mapper/extractPath api payload - ${JSON.stringify(req.body)}`);
+
   if (!path || !obj) {
-    return res.status(400).send({ data: "missing path || obj " });
+    logger.error("missing path || obj");
+    return res.status(400).send({ data: "missing path || obj" });
   }
   try {
     const response = extractPath(path, obj);
 
+    logger.info(`/mapper/extractPath api executed`);
     res.send({ response });
   } catch (e) {
-    logger.info("Error while extracting path  -  ", e);
+    logger.info("/mapper/extractPath error  -  ", e);
     res.status(400).send({ error: true, data: e });
   }
 });
 
 router.post("/mapper/repeat", async (req: Request, res: Response) => {
+  logger.info(`${req.body?.transactionId} - /mapper/repeat api controller`);
   const { transactionId, config } = req.body;
 
+  logger.debug(
+    `${transactionId} - /mapper/repeat api payload - ${JSON.stringify(
+      req.body
+    )}`
+  );
+
   if (!transactionId || !config) {
+    logger.error("missing transactionId || config");
     return res.status(400).send({ data: "missing transactionId || config" });
   }
 
   let session = getCache("jm_" + transactionId);
 
   if (!session) {
+    logger.error("No session found.");
     return res.status(400).send({ data: "No session found." });
   }
 
@@ -186,11 +218,19 @@ router.post("/mapper/repeat", async (req: Request, res: Response) => {
 
   insertSession(session);
 
+  logger.info(`${req.body?.transactionId} - /mapper/repeat api executed`);
   res.send({ session });
 });
 
 router.post("/mapper/addFlow", (req: Request, res: Response) => {
+  logger.info(`${req.body?.transactionId} - /mapper/addFlow api controller`);
   const { configName, transactionId } = req.body;
+
+  logger.debug(
+    `${
+      req.body?.transactionId
+    } - /mapper/addFlow api payload - ${JSON.stringify(req.body)}`
+  );
 
   let session = getCache("jm_" + transactionId);
 
@@ -206,33 +246,50 @@ router.post("/mapper/addFlow", (req: Request, res: Response) => {
 
   insertSession(session);
 
+  logger.info(`${transactionId} - /mapper/addFlow api controller`);
   res.send({ session });
 });
 
 router.get("/mapper/flows", (_req: Request, res: Response) => {
+  logger.info("/mapper/flow api controller");
   const flows = configLoader.getListOfFlow();
 
-  logger.info("Flows", flows);
-
+  logger.info("/mapper/flow api executed");
   res.send({ data: flows });
 });
 
 router.get(
   "/mapper/additionalFlows/:configName",
   (req: Request, res: Response) => {
+    logger.info("/mapper/additionalFlows/:configName api controller");
     const configName = req.params.configName;
+    logger.debug(
+      `/mapper/additionalFlows/:configName api params - ${configName}`
+    );
 
     const additionalFlows = configLoader.getListOfAdditionalFlows(configName);
 
+    logger.info("/mapper/additionalFlows/:configName api executed");
     res.send({ data: additionalFlows });
   }
 );
 
 router.post("/mapper/unsolicited", async (req: Request, res: Response) => {
-  logger.info("Indise mapper unsolicited");
+  logger.info(
+    `${req.body?.updatedSession?.transaction_id} - /mapper/unsolicited api controller`
+  );
   const { businessPayload, updatedSession, messageId, response } = req.body;
 
+  logger.debug(
+    `${
+      req.body?.updatedSession?.transaction_id
+    } - /mapper/unsolicited api payload - ${JSON.stringify(req.body)}`
+  );
+
   if (!businessPayload || !updatedSession || !messageId || !response) {
+    logger.error(
+      "businessPayload || updatedSession|| response || messageId not present"
+    );
     return res.status(400).send({
       message:
         "businessPayload || updatedSession|| response || messageId not present",
@@ -248,14 +305,28 @@ router.post("/mapper/unsolicited", async (req: Request, res: Response) => {
     true
   );
 
+  logger.info(
+    `${updatedSession?.transaction_id} - /mapper/unsolicited api controller executed`
+  );
   res.send({ success: true });
 });
 
 router.post("/mapper/ondc", async (req: Request, res: Response) => {
-  logger.info("Indise mapper config");
+  logger.info(
+    `${req.body?.updatedSession?.transaction_id} - /mapper/ondc api controller`
+  );
   const { businessPayload, updatedSession, messageId, response } = req.body;
 
+  logger.debug(
+    `${
+      req.body?.updatedSession?.transaction_id
+    } - /mapper/ondc api payload - ${JSON.stringify(req.body)}`
+  );
+
   if (!businessPayload || !updatedSession || !messageId || !response) {
+    logger.error(
+      "businessPayload || updatedSession || response || messageId not present"
+    );
     return res.status(400).send({
       message:
         "businessPayload || updatedSession || response || messageId not present",
@@ -270,17 +341,29 @@ router.post("/mapper/ondc", async (req: Request, res: Response) => {
     response
   );
 
+  logger.info(
+    `${updatedSession?.transaction_id} - /mapper/ondc api controller executed`
+  );
   res.send({ success: true });
 });
 
 router.post("/mapper/:config", async (req: Request, res: Response) => {
+  logger.info(`${req.body?.transactionId} - /mapper/:config api controller`);
   const { transactionId, payload } = req.body;
+  logger.debug(
+    `${transactionId} /mapper/:config api payload - ${JSON.stringify(req.body)}`
+  );
   const config = req.params.config;
   let session = getCache("jm_" + transactionId);
 
-  logger.info("cofig> ", config);
+  logger.info(
+    `${req.body?.transactionId} - /mapper/:config api params - config : ${config}`
+  );
 
   if (!session) {
+    logger.error(
+      `${transactionId} - /mapper/:config error - No session exists`
+    );
     return res.status(400).send({ message: "No session exists" });
   }
 
@@ -312,8 +395,9 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
       });
     } catch (e: any) {
       logger.error(
-        "Error while update session for protocol server: ",
-        e?.messaage || e
+        `${transactionId} - /mapper/:config - Error while update session for protocol server: ${
+          e?.messaage || e
+        }`
       );
       throw new Error("Error while update session for protocol server");
     }
@@ -326,6 +410,7 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
 
     insertSession(session);
 
+    logger.info(`${transactionId} - /mapper/:config api executed`);
     return res.status(200).send({ session });
   }
 
@@ -339,7 +424,6 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
     payload.bpp_id = protocolSession.bpp_id;
   }
 
-  console.log("sending Transdcaiton ID", transactionId);
   try {
     const response = await axios.post(
       `${process.env.PROTOCOL_SERVER_BASE_URL}createPayload`,
@@ -372,8 +456,6 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
     const updatedLocalSession = getCache("jm_" + transactionId);
 
     session = { ...session, ...updatedLocalSession };
-
-    console.log("MODE", mode);
 
     if (mode === "ASYNC") {
       protocolCalls[config] = {
@@ -455,23 +537,18 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
 
     insertSession(session);
 
+    logger.info(`${transactionId} - /mapper/:config api executed`);
     res.status(200).send({ response: response.data, session });
   } catch (e: any) {
-    logger.error("Error while sending request  -  ", e?.response?.data || e);
-    return res.status(500).send({ message: "Error while sending request", e });
+    logger.error(
+      `${transactionId} - /mapper/:config - Error while sending request  -  ${
+        e?.response?.data || e
+      }`
+    );
+    return res
+      .status(500)
+      .send({
+        message: `Error while sending request - ${e?.response?.data || e}`,
+      });
   }
 });
-
-router.post("/submissionId", async (req: Request, res: Response) => {
-  const { url } = req.body;
-
-  try {
-    const response = await axios.post(url, {});
-
-    res.send({ id: response.data.submission_id });
-  } catch (e: any) {
-    res.status(400).send({ error: true, message: e.message || e });
-  }
-});
-
-// module.exports = router;

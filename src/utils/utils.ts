@@ -1,10 +1,5 @@
 import cache from "node-cache";
-import {
-  createAuthorizationHeader,
-  isSignatureValid,
-} from "ondc-crypto-sdk-nodejs";
 import axios from "axios";
-import { extractBusinessData } from "./buildPayload";
 const myCache = new cache({ stdTTL: 100, checkperiod: 120 });
 import { logger } from "./logger";
 import { eventEmitter } from "./eventEmitter";
@@ -103,8 +98,6 @@ export const handleRequestForJsonMapper = async (
     return;
   }
 
-  console.log("got config", config);
-
   let nextRequest = protocolCalls[config]?.nextRequest;
 
   if (!nextRequest) {
@@ -201,11 +194,3 @@ export const findPaylaodAgainstMessageId = (
 
   return [filteredPaylaod];
 };
-
-// module.exports = {
-//   getCache,
-//   insertSession,
-//   handleRequestForJsonMapper,
-//   updateProtocolSessionToAdditionalFlows,
-//   findPaylaodAgainstMessageId,
-// };
