@@ -7,8 +7,6 @@ let envLocation = process.env.NODE_ENV || "development";
 let environment = process.env.env || "development";
 environment = environment.trim();
 
-console.log("_____________", process.env.LOKI_HOST, envLocation);
-
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: winston.format.combine(

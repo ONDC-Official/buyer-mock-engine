@@ -545,10 +545,8 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
         e?.response?.data || e
       }`
     );
-    return res
-      .status(500)
-      .send({
-        message: `Error while sending request - ${e?.response?.data || e}`,
-      });
+    return res.status(500).send({
+      message: `Error while sending request - ${e?.response?.data || e}`,
+    });
   }
 });
