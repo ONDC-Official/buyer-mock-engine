@@ -4,3 +4,5 @@ Logs
 .env.dev.mob
 .env.dev.fis
 .env.dev
+grafana/loki
+grafana/wal

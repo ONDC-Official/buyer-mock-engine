@@ -6,6 +6,11 @@ require("winston-daily-rotate-file");
 let envLocation = process.env.NODE_ENV || "development";
 let environment = process.env.env || "development";
 environment = environment.trim();
+const { combine, timestamp, printf, colorize } = format;
+
+const myFormat = printf(({ level, message, timestamp, uuid }) => {
+  return `[${uuid}] [${timestamp}] [${level}]: ${message}`;
+});
 
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
@@ -26,7 +31,7 @@ export const logger = winston.createLogger({
       onConnectionError: (err: any) => logger.error(err),
     }),
     new transports.Console({
-      format: format.combine(format.simple(), format.colorize()),
+      format: combine(timestamp(), colorize(), myFormat),
     }),
   ],
 });
