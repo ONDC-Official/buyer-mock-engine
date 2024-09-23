@@ -24,11 +24,11 @@ export const logger = winston.createLogger({
   transports: [
     new LokiTransport({
       host: process.env.LOKI_HOST as string,
-      labels: { app: process.env.LOKI_APP_NAME || `infra_${envLocation}` },
+      labels: { app: process.env.LOKI_APP_NAME || `infra_buyer_mock_engine` },
       json: true,
       format: format.json(),
       replaceTimestamp: true,
-      onConnectionError: (err: any) => logger.error(err),
+      onConnectionError: (err: any) => logger.error(`Logger Connection Error `),
     }),
     new transports.Console({
       format: combine(timestamp(), colorize(), myFormat),

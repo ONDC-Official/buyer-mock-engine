@@ -101,8 +101,8 @@ router.post("/mapper/session", (req: Request, res: Response) => {
     };
 
     insertSession(session);
-    res.send({ sucess: true, data: session });
     logger.info("/mapper/session api executed", { uuid: logID });
+    res.send({ sucess: true, data: session });
   } catch (e) {
     logger.error(`/mapper/session error - ${e}`, { uuid: logID });
     res.status(500).send("Internal Server Error");
