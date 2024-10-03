@@ -493,7 +493,9 @@ router.post("/mapper/:config", async (req: Request, res: Response) => {
         transactionId: transactionId,
         target: protocolCalls[config].target,
         session: {
-          createSession: protocolCalls[config].target === "GATEWAY",
+          createSession:
+            protocolCalls[config].target === "GATEWAY" ||
+            protocolCalls[config].type === "settle",
           data: protocolSession,
         },
       }
